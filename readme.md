@@ -1,6 +1,6 @@
 <h1> Cordr</h1>
 Cordr is a macOS hidden translate tool.
-**Cordr is to be updated frequently with new features and improvements.**
+> Cordr is to be updated frequently with new features and improvements.
 
 
 <h2>Usage</h3>
