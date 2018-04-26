@@ -1,64 +1,136 @@
+__author__ = "Ferris Linde"
+__copyright__ = "Copyright (C) 2018 Ferris Linde"
+__license__ = "Public Domain"
+__version__ = "2.0"
+__github__ = "https://github.com/ferris"
 
-#  You _must_ turn on assistive devices under Accessibility prefpane
-# for any of this code to work. Otherwise it won't do anything.
-from Cocoa import *
-from Foundation import *
-from PyObjCTools import AppHelper
-import keycode
-import string
-import sys
-import subprocess
+'''
+Cordr, a macOS hidden translator tool.
+For educational purposes only. Don't use to cheat!
+In order for the keylogging functions to work,
+this script must be granted root or accessiblity access.
+The 'pynput' module must be installed to run thie file.
+'''
+
+from pynput import keyboard
 import re
-import urllib2
-import urllib
-import HTMLParser
+import urllib.parse
+import urllib.request
+import html
 import os
 
+def passIn(phrase, lanTo, lanFrom):
+    global newPhrase
+    newPhrase = translate(phrase, lanTo, lanFrom)
+    print("Translated: " + phrase + " ; to: " + newPhrase)
+    notify("{} to {}".format(lanFrom, lanTo), newPhrase)
+    os.system('afplay /System/Library/Sounds/Bottle.aiff')
 
-class AppDelegate(NSObject):
-    def applicationDidFinishLaunching_(self, aNotification):
-        NSEvent.addGlobalMonitorForEventsMatchingMask_handler_(NSKeyDownMask, handler)
+def notify(title, text):
+    os.system("""
+              osascript -e 'display notification "{}" with title "{}"'
+              """.format(text, title))
 
+# PYNPUT
 
-def handler(event):
+def on_release(key):
     global going
     global starter
     global userInput
-    if event.type() == NSKeyDown and keycode.tostring(event.keyCode()) in string.printable:
-        if keycode.tostring(event.keyCode()) == "`" or keycode.tostring(event.keyCode()) == "\\":
-            #print("Goin:" + str(going))
+    global kb
+    global newPhrase
+    try:
+        print('{0} released'.format(key.char))
+        if key.char == '`' or key.char == '\\':
+            print("activator pressed!")
             if not going:
                 print("going = true")
                 going = True
                 os.system('afplay /System/Library/Sounds/Frog.aiff')
-                starter = keycode.tostring(event.keyCode())
+                starter = key.char
             else:
+                print("going = false")
                 going = False
-                #print("going = false")
                 if starter == "`":
+                    print("translate(\'{}\', \"es\", \"en\")".format(userInput))
                     passIn(userInput, "es", "en")
                 else:
+                    print("translate(\'{}\', \"en\", \"es\")".format(userInput))
                     passIn(userInput, "en", "es")
                 userInput = ""
-
         elif going:
-            userInput += keycode.tostring(event.keyCode())
-            #print("aadd user in")
-            #print(str(going))
+            userInput += key.char
+    except:
+        print('special key {0} pressed'.format(key))
+        if going:
+            # special modifiers for user input
+            if key == keyboard.Key.space:
+                userInput += " "
+            elif key == keyboard.Key.backspace:
+                userInput = userInput[:-1]
+        elif key == keyboard.Key.caps_lock:
+            typeOut(newPhrase)
 
-        #print keycode.tostring(event.keyCode())
+def typeOut(s):
+    # TODO: try to somehow add punctuation
+    s = s.lower()
+    for char in s:
+        if ord(char) >= 97 and ord(char) <= 122:
+            # lower case a-z
+            kb.press(char)
+            kb.release(char)
+        elif ord(char) == 32:
+            # space
+            kb.press(keyboard.Key.space)
+            kb.release(keyboard.Key.space)
+        elif ord(char) == 225:
+            # á
+            with kb.pressed(keyboard.Key.alt):
+                kb.press('e')
+                kb.release('e')
+            kb.press('a')
+            kb.release('a')
+        elif ord(char) == 233:
+            # é
+            with kb.pressed(keyboard.Key.alt):
+                kb.press('e')
+                kb.release('e')
+            kb.press('e')
+            kb.release('e')
+        elif ord(char) == 237:
+            # í
+            with kb.pressed(keyboard.Key.alt):
+                kb.press('e')
+                kb.release('e')
+            kb.press('i')
+            kb.release('i')
+        elif ord(char) == 243:
+            # ó
+            with kb.pressed(keyboard.Key.alt):
+                kb.press('e')
+                kb.release('e')
+            kb.press('o')
+            kb.release('o')
+        elif ord(char) == 250:
+            # ú
+            with kb.pressed(keyboard.Key.alt):
+                kb.press('e')
+                kb.release('e')
+            kb.press('u')
+            kb.release('u')
+        elif ord(char) == 241:
+            # ñ
+            with kb.pressed(keyboard.Key.alt):
+                kb.press('n')
+                kb.release('n')
+            kb.press('n')
+            kb.release('n')
+        else:
+            print('could not type {}'.format(char))
 
 
-def main():
-    app = NSApplication.sharedApplication()
-    delegate = AppDelegate.alloc().init()
-    NSApp().setDelegate_(delegate)
-    AppHelper.runEventLoop()
+# GOOGLE TRANSLATE
 
-# ----------
-
-
-# Back End
 agent = {'User-Agent':
              "Mozilla/4.0 (\
              compatible;\
@@ -70,47 +142,39 @@ agent = {'User-Agent':
              .NET CLR 3.0.04506.30\
              )"}
 
-
-def unescape(text):
-    parser = HTMLParser.HTMLParser()
-    return (parser.unescape(text))
-
-
 def translate(to_translate, to_language="auto", from_language="auto"):
     # language is shortcut (es is spanish, fr is french, en is english)
     base_link = "http://translate.google.com/m?hl=%s&sl=%s&q=%s"
-    to_translate = urllib.quote_plus(to_translate)
+    to_translate = urllib.parse.quote_plus(to_translate)
     link = base_link % (to_language, from_language, to_translate)
-    request = urllib2.Request(link, headers=agent)
-    raw_data = urllib2.urlopen(request).read()
-
+    request = urllib.request.Request(link, headers=agent)
+    raw_data = urllib.request.urlopen(request).read()
     data = raw_data.decode("utf-8")
     expr = r'class="t0">(.*?)<'
     re_result = re.findall(expr, data)
     if (len(re_result) == 0):
         result = ""
     else:
-        result = unescape(re_result[0])
+        result = html.unescape(re_result[0])
     return (result)
 
 
-def write_to_clipboard(output):
-    process = subprocess.Popen(
-        'pbcopy', env={'LANG': 'en_US.UTF-8'}, stdin=subprocess.PIPE)
-    process.communicate(output.encode('utf-8'))
+# \\\\\\\\\\\\\\\\\\\\\\\\
+# |||||||||main|||||||||||
+# ////////////////////////
 
-def passIn(phrase, lanTo, lanFrom):
-    newPhrase = translate(phrase, lanTo, lanFrom)
-    print("Translated: " + phrase + " ; to: " + newPhrase)
-    write_to_clipboard(newPhrase)
-    os.system('afplay /System/Library/Sounds/Bottle.aiff')
 
-#--------
 if __name__ == '__main__':
     global going
     global starter
     global userInput
+    global kb
+    global newPhrase
     going = False
-    starter = "`"
+    starter = ""
     userInput = ""
-    main()
+    newPhrase = ""
+    # Collect events until released
+    kb = keyboard.Controller()
+    with keyboard.Listener(on_release=on_release) as listener:
+        listener.join()
