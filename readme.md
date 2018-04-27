@@ -1,7 +1,7 @@
 <h1> Cordr</h1>
 Cordr, a macOS hidden translator tool.
 
-<h2>Disclaimer<h2>
+<h2>Disclaimer</h2>
 For educational purposes only.
 Don't use to cheat!
 
