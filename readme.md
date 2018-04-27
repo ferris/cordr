@@ -1,6 +1,10 @@
 <h1> Cordr</h1>
-Cordr is a macOS hidden translate tool. It will be updated frequently with new features and improvements.
+Cordr, a macOS hidden translator tool.
 
+<h2>Disclaimer<h2>
+For educational purposes only.
+Don't use to cheat!
 
 <h2>Usage</h3>
-In order to use cordr, you must give it access in the System Preferences accessibility menu. This is in order to let it read your keystrokes while you are in any application. You also must have the required libraries installed.
+In order for the keylogging functions to work, this script must be granted root or accessiblity access.
+The 'pynput' module must be installed to run thie file.
