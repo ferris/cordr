@@ -1,45 +1,32 @@
-__author__    = "Ferris Linde"
+__author__ = "Ferris Linde"
 __copyright__ = "Copyright (C) 2023 Ferris Linde"
-__license__   = "Public Domain"
-__version__   = "3.0"
-__github__    = "https://github.com/ferris/cordr"
+__license__ = "Public Domain"
+__version__ = "3.0"
+__github__ = "https://github.com/ferris/cordr"
 
-'''
-Cordr, a macOS ChatGPT-in-the-background tool.
-In order for the key-logging functions to work, this script must be granted root or accessibility access.
-'''
-
-from pynput import keyboard
-import re
-import urllib.parse
-import urllib.request
-import html
 import os
 import openai
+from pynput import keyboard
 
 
-def passIn(phrase):
-    global newPhrase
-    # newPhrase = translate(phrase, lanTo, lanFrom)
-    newPhrase = chatgpt(phrase)
-    # print("Translated: " + phrase + " ; to: " + newPhrase)
-    print("Response: " + newPhrase)
-    # notify("{} to {}".format(lanFrom, lanTo), newPhrase)
+def pass_in(phrase):
+    global gpt_resp
+    gpt_resp = chatgpt(phrase)
+    print("ChatGPT Response: " + gpt_resp)
+    notify("ChatGPT Response", gpt_resp)
     os.system('afplay /System/Library/Sounds/Bottle.aiff')
 
-def notify(title, text):
-    os.system("""
-              osascript -e 'display notification "{}" with title "{}"'
-              """.format(text, title))
 
-# PYNPUT
+def notify(title, text):
+    os.system("osascript -e 'display notification \"{}\" with title \"{}\"".format(text, title))
+
 
 def on_release(key):
     global going
     global starter
     global userInput
     global kb
-    global newPhrase
+    global gpt_resp
     try:
         print('{0} released'.format(key.char))
         if key.char == '\\':
@@ -52,12 +39,12 @@ def on_release(key):
             else:
                 print("going = false")
                 going = False
-                passIn(userInput)
-                print(newPhrase)
+                pass_in(userInput)
+                print(gpt_resp)
                 userInput = ""
         elif going:
             userInput += key.char
-    except Exception as e:
+    except Exception as e:  # TODO: refine/rethink this except statement
         print(e)
         print('special key {0} pressed'.format(key))
         if going:
@@ -67,13 +54,14 @@ def on_release(key):
             elif key == keyboard.Key.backspace:
                 userInput = userInput[:-1]
         elif key == keyboard.Key.caps_lock:
-            typeOut(newPhrase)
+            type_out(gpt_resp)
 
-def typeOut(s):
+
+def type_out(s):
     # TODO: try to somehow add punctuation
     s = s.lower()
     for char in s:
-        if ord(char) >= 97 and ord(char) <= 122:
+        if 97 <= ord(char) <= 122:
             # lower case a-z
             kb.press(char)
             kb.release(char)
@@ -127,20 +115,6 @@ def typeOut(s):
             print('could not type {}'.format(char))
 
 
-# GOOGLE TRANSLATE
-
-agent = {'User-Agent':
-             "Mozilla/4.0 (\
-             compatible;\
-             MSIE 6.0;\
-             Windows NT 5.1;\
-             SV1;\
-             .NET CLR 1.1.4322;\
-             .NET CLR 2.0.50727;\
-             .NET CLR 3.0.04506.30\
-             )"}
-
-
 def chatgpt(msg):
     resp = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
@@ -152,33 +126,16 @@ def chatgpt(msg):
     return resp.choices[0].message.content
 
 
-def translate(to_translate, to_language="auto", from_language="auto"):
-    # language is shortcut (es is spanish, fr is french, en is english)
-    base_link = "http://translate.google.com/m?hl=%s&sl=%s&q=%s"
-    to_translate = urllib.parse.quote_plus(to_translate)
-    link = base_link % (to_language, from_language, to_translate)
-    request = urllib.request.Request(link, headers=agent)
-    raw_data = urllib.request.urlopen(request).read()
-    data = raw_data.decode("utf-8")
-    expr = r'class="t0">(.*?)<'
-    re_result = re.findall(expr, data)
-    if (len(re_result) == 0):
-        result = ""
-    else:
-        result = html.unescape(re_result[0])
-    return (result)
-
-
 if __name__ == '__main__':
     global going
     global starter
     global userInput
     global kb
-    global newPhrase
+    global gpt_resp
     going = False
     starter = ""
     userInput = ""
-    newPhrase = ""
+    gpt_resp = ""
     # Collect events until released
     kb = keyboard.Controller()
     with keyboard.Listener(on_release=on_release) as listener:
