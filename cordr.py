@@ -1,15 +1,12 @@
-__author__ = "Ferris Linde"
-__copyright__ = "Copyright (C) 2018 Ferris Linde"
-__license__ = "Public Domain"
-__version__ = "2.0"
-__github__ = "https://github.com/ferris"
+__author__    = "Ferris Linde"
+__copyright__ = "Copyright (C) 2023 Ferris Linde"
+__license__   = "Public Domain"
+__version__   = "3.0"
+__github__    = "https://github.com/ferris/cordr"
 
 '''
-Cordr, a macOS hidden translator tool.
-For educational purposes only. Don't use to cheat!
-In order for the keylogging functions to work,
-this script must be granted root or accessiblity access.
-The 'pynput' module must be installed to run thie file.
+Cordr, a macOS ChatGPT-in-the-background tool.
+In order for the key-logging functions to work, this script must be granted root or accessibility access.
 '''
 
 from pynput import keyboard
@@ -18,12 +15,16 @@ import urllib.parse
 import urllib.request
 import html
 import os
+import openai
 
-def passIn(phrase, lanTo, lanFrom):
+
+def passIn(phrase):
     global newPhrase
-    newPhrase = translate(phrase, lanTo, lanFrom)
-    print("Translated: " + phrase + " ; to: " + newPhrase)
-    notify("{} to {}".format(lanFrom, lanTo), newPhrase)
+    # newPhrase = translate(phrase, lanTo, lanFrom)
+    newPhrase = chatgpt(phrase)
+    # print("Translated: " + phrase + " ; to: " + newPhrase)
+    print("Response: " + newPhrase)
+    # notify("{} to {}".format(lanFrom, lanTo), newPhrase)
     os.system('afplay /System/Library/Sounds/Bottle.aiff')
 
 def notify(title, text):
@@ -41,7 +42,7 @@ def on_release(key):
     global newPhrase
     try:
         print('{0} released'.format(key.char))
-        if key.char == '`' or key.char == '\\':
+        if key.char == '\\':
             print("activator pressed!")
             if not going:
                 print("going = true")
@@ -51,16 +52,13 @@ def on_release(key):
             else:
                 print("going = false")
                 going = False
-                if starter == "`":
-                    print("translate(\'{}\', \"es\", \"en\")".format(userInput))
-                    passIn(userInput, "es", "en")
-                else:
-                    print("translate(\'{}\', \"en\", \"es\")".format(userInput))
-                    passIn(userInput, "en", "es")
+                passIn(userInput)
+                print(newPhrase)
                 userInput = ""
         elif going:
             userInput += key.char
-    except:
+    except Exception as e:
+        print(e)
         print('special key {0} pressed'.format(key))
         if going:
             # special modifiers for user input
@@ -142,6 +140,18 @@ agent = {'User-Agent':
              .NET CLR 3.0.04506.30\
              )"}
 
+
+def chatgpt(msg):
+    resp = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": msg},
+        ]
+    )
+    return resp.choices[0].message.content
+
+
 def translate(to_translate, to_language="auto", from_language="auto"):
     # language is shortcut (es is spanish, fr is french, en is english)
     base_link = "http://translate.google.com/m?hl=%s&sl=%s&q=%s"
@@ -157,11 +167,6 @@ def translate(to_translate, to_language="auto", from_language="auto"):
     else:
         result = html.unescape(re_result[0])
     return (result)
-
-
-# \\\\\\\\\\\\\\\\\\\\\\\\
-# |||||||||main|||||||||||
-# ////////////////////////
 
 
 if __name__ == '__main__':
